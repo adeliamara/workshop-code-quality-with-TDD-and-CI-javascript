@@ -1,0 +1,45 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches:
+      - test/create-tests
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: mysecretpassword
+          POSTGRES_DB: crud3_test
+        options: --health-cmd "pg_isready -U postgres" --health-interval 10s
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      env:
+        DATABASE_URL: postgres://postgres:mysecretpassword@localhost:5432/crud3_test
+      run: npm run all_tests
+
+    - name: Upload test results
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: ./test-results

@@ -35,7 +35,7 @@ jobs:
     - name: Run tests
       env:
         DATABASE_URL: postgres://postgres:mysecretpassword@localhost:5432/crud3_test
-      run: npm all_tests
+      run: npm run all_tests
 
     - name: Upload test results
       if: failure()

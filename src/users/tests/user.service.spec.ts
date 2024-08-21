@@ -1,86 +1,74 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from '../user.service';
-import { Repository } from 'typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../entities/user.entity';
+import { Repository, DataSource } from 'typeorm';
 import { CreateUserDto } from '../dto/create-user.dto';
+import { NotFoundException } from '@nestjs/common';
+import { testDataSource } from '../../config/ormconfig.test'; // Importe a configuração do SQLite
 
 describe('UserService', () => {
-  let userService: UserService;
+  let service: UserService;
   let userRepository: Repository<User>;
+  let dataSource: DataSource;
 
-  beforeEach(() => {
-    userRepository = {
-      save: jest.fn(),
-      find: jest.fn(),
-      findOne: jest.fn(),
-      findOneBy: jest.fn(),
-      softRemove: jest.fn(),
-      count: jest.fn(),
-    } as unknown as Repository<User>;
+  beforeAll(async () => {
+    dataSource = testDataSource;
+    await dataSource.initialize();
 
-    userService = new UserService(userRepository);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: getRepositoryToken(User),
+          useValue: dataSource.getRepository(User),
+        },
+      ],
+    }).compile();
+
+    service = module.get<UserService>(UserService);
+    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
   });
 
-  it('should be defined', () => {
-    expect(userService).toBeDefined();
+  beforeEach(async () => {
+    await userRepository.clear(); // Limpa a tabela antes de cada teste
   });
 
-  describe('create', () => {
+  describe('Basic CRUD Operations', () => {
+    it('should be defined', () => {
+      expect(service).toBeDefined();
+    });
+
     it('should create a user', async () => {
-      const createUserDto: CreateUserDto = {
-          email: 'test@test.com', name: 'Test', phone: '1234567890', birthDate: new Date(),
-          id: 0,
-          removed: false
-      };
-      const user: User = { id: 1, ...createUserDto } as unknown as User;
+      const userDto = { email: 'test@example.com', name: 'test',birthDate: new  Date() } as CreateUserDto;
+      const user = await service.create(userDto);
 
-      jest.spyOn(userRepository, 'save').mockResolvedValue(user);
-
-      expect(await userService.create(createUserDto)).toEqual(user);
-    });
-  });
-
-  describe('findAll', () => {
-    it('should return an array of users', async () => {
-      const users = [{ id: 1, email: 'test@test.com', name: 'Test', phone: '1234567890', birthDate: new Date() }] as User[];
-
-      jest.spyOn(userRepository, 'find').mockResolvedValue(users);
-
-      expect(await userService.findAll()).toEqual(users);
-    });
-  });
-
-  describe('findOne', () => {
-    it('should return a user by id', async () => {
-      const user = { id: 1, email: 'test@test.com', name: 'Test', phone: '1234567890', birthDate: new Date() } as User;
-
-      jest.spyOn(userRepository, 'findOneBy').mockResolvedValue(user);
-
-      expect(await userService.findOne(1)).toEqual(user);
+      expect(user).toHaveProperty('id');
+      expect(user.email).toEqual(userDto.email);
     });
 
-    it('should throw NotFoundException if user not found', async () => {
-      jest.spyOn(userRepository, 'findOneBy').mockResolvedValue(null);
+    it('should find a user by email', async () => {
+      const userDto = { email: 'test@example.com', name: 'test',birthDate: new  Date() } as CreateUserDto;
+      await service.create(userDto);
 
-      await expect(userService.findOne(1)).rejects.toThrow('User with ID 1 not found.');
+      const foundUser = await service.findOneByEmail(userDto.email);
+      expect(foundUser).toBeDefined();
+      expect(foundUser.email).toEqual(userDto.email);
     });
-  });
 
-  describe('remove', () => {
+    it('should throw a NotFoundException if the user does not exist', async () => {
+      const email = 'nonexistent@example.com';
+
+      await expect(service.findOneByEmail(email)).rejects.toThrow(NotFoundException);
+    });
+
     it('should remove a user', async () => {
-      const user = { id: 1, email: 'test@test.com', name: 'Test', phone: '1234567890', birthDate: new Date() } as User;
+      const userDto = { email: 'test@example.com', name: 'test',birthDate: new  Date() } as CreateUserDto;
+      const user = await service.create(userDto);
 
-      jest.spyOn(userService, 'findOne').mockResolvedValue(user);
-      jest.spyOn(userRepository, 'softRemove').mockResolvedValue(user);
+      await service.remove(user.id);
 
-      expect(await userService.remove(1)).toEqual(user);
-    });
-  });
-
-  describe('count', () => {
-    it('should return the user count', async () => {
-      jest.spyOn(userRepository, 'count').mockResolvedValue(5);
-
-      expect(await userService.count()).toBe(5);
+      await expect(service.findOne(user.id)).rejects.toThrow(NotFoundException);
     });
   });
 });

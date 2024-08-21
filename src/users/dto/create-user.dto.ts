@@ -3,7 +3,7 @@ import { IsDate, IsEmail, IsEmpty, IsNotEmpty, IsOptional, IsString} from "class
 
 export class CreateUserDto {
     @IsEmpty()
-    id: number;
+    id?: number;
 
     @IsString()
     @IsNotEmpty()
@@ -22,13 +22,5 @@ export class CreateUserDto {
     email: string;
 
     @IsEmpty()
-    removed: boolean;
-
-    @IsDate()
-    @Type(() => Date)
-    @IsOptional()
-    emailVerifiedAt: Date;
-
-    @IsEmpty()
-    rememberToken: string;
+    removed?: boolean;
   }

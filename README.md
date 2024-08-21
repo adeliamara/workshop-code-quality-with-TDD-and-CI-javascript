@@ -33,8 +33,37 @@ Se o Docker e o Docker Compose não estiverem instalados ou se houver problemas 
 
 # Para os dois casos
 
-`docker-compose build`
+`docker-compose up -build`
 
-Iniciar os containers (após a construção):
 
-`docker-compose up`
+
+# Testes
+
+Para um projeto Express, você pode usar o Jest e a biblioteca supertest para testar os controladores e serviços. Vou mostrar como criar testes para o UserService e o UserController em um projeto Express.
+
+Certifique-se de ter as seguintes dependências instaladas:
+
+npm install --save-dev jest ts-jest @types/jest
+
+E para testes de integração com o banco de dados (se necessário):
+
+
+npm install --save-dev supertest
+
+npm install --save-dev supertest
+
+# Levantando DB
+
+docker-compose -f docker-compose.test.yml up
+
+# Rodando testes indivualemente 
+
+ npx jest src/users/tests/user.service.spec.ts
+
+# Rodando todos 
+
+npm test
+
+ npm run one_test src/users/tests/user.service.spec.ts
+
+ # com dpeendencia de banco
